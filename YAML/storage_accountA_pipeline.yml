@@ -1,0 +1,13 @@
+resources:
+  repositories:
+  - repository: templates
+    type: git
+    name: TheYAMLPipelineOne.git
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+    - template: storage_accountA_template.yml
