@@ -2,6 +2,7 @@ resources:
   repositories:
   - repository: templates
     type: git
+    ref: feature/terraform_aws
     name: TheYAMLPipelineOne.git
 trigger:
 - main
