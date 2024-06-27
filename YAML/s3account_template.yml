@@ -21,4 +21,10 @@ stages:
     environmentObjects: ${{ parameters.environmentObjects }}
     templateFileName: ${{ parameters.templateFileName }}
     serviceName: ${{ parameters.serviceName }}
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main')}}:
+  - template: stages/terraform_apply_aws_stage.yml@templates
+    parameters:
+      environmentObjects: ${{ parameters.environmentObjects }}
+      templateFileName: ${{ parameters.templateFileName }}
+      serviceName: ${{ parameters.serviceName }}
 
