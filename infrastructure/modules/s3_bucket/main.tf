@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "example" {
-  bucket = "novents3bucket"
+  bucket = "nawscicd3bucket"
 
   tags = {
     Name        = "Novant"
