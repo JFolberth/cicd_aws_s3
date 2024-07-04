@@ -1,0 +1,119 @@
+## This for demonstration prupose only and is the extract of the fully expanded YAML pipeline file
+## It may not be the most up-to-date version of the pipeline file
+resources:
+  repositories:
+  - repository: templates
+    type: github
+    name: JFolberth/TheYAMLPipelineOne
+    endpoint: JFolberth
+trigger:
+  branches:
+    include:
+    - main
+pool:
+  vmImage: 'ubuntu-latest'
+stages:
+- stage: s3account_tf_build
+  jobs:
+  - job: Publish_infrastructure
+    steps:
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Pipeline Artifact infrastructure '
+      inputs:
+        targetPath: infrastructure
+        artifact: infrastructure
+        properties: ''
+  - job: buildTerraform_dev2
+    dependsOn: []
+    displayName: Build Terraform dev2
+    variables:
+    - name: backendServiceAws
+      value: awsdev2
+    - name: workingDirectory
+      value: infrastructure
+    - name: backendAwsBucket
+      value: jfmsterraformstate
+    - name: backendAwsRegion
+      value: us-east-1
+    steps:
+    - task: TerraformInstaller@1
+      displayName: install terraform
+      inputs:
+        terraformVersion: latest
+    - task: TerraformCLI@1
+      displayName: 'Terraform : init'
+      inputs:
+        command: init
+        backendType: aws
+        workingDirectory: infrastructure
+        backendServiceAws: awsdev2
+        backendAwsRegion: us-east-1
+        backendAwsBucket: jfmsterraformstate
+        backendAwsKey: s3account.tfstate
+    - task: TerraformCLI@1
+      displayName: 'Terraform : plan'
+      inputs:
+        command: plan
+        workingDirectory: infrastructure
+        publishPlanResults: CI - dev2 - s3account
+        providerServiceAws: awsdev2
+        providerAwsRegion: us-east-1
+        commandOptions: -lock=false -var-file="variables/dev2.eus.variables.tfvars" -out=$(System.DefaultWorkingDirectory)/terraform.tfplan -detailed-exitcode
+- stage: s3account_dev2_eus_tf_apply
+  jobs:
+  - deployment: terraformApplydev2
+    displayName: Terraform Apply dev2
+    variables:
+    - name: backendServiceAws
+      value: awsdev2
+    - name: workingDirectory
+      value: infrastructure
+    - name: backendAwsBucket
+      value: jfmsterraformstate
+    - name: backendAwsRegion
+      value: us-east-1
+    - name: commandOptions
+      value: ''
+    environment:
+      name: dev2
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: 30f35852-3f7e-4c0c-9a88-e127b4f97211@1
+            inputs:
+              alias: current
+              artifact: infrastructure
+          - task: TerraformInstaller@1
+            displayName: install terraform
+            inputs:
+              terraformVersion: latest
+          - task: TerraformCLI@1
+            displayName: 'Terraform : init'
+            inputs:
+              command: init
+              backendType: aws
+              workingDirectory: $(Pipeline.Workspace)/infrastructure
+              backendServiceAws: awsdev2
+              backendAwsRegion: us-east-1
+              backendAwsBucket: jfmsterraformstate
+              backendAwsKey: s3account.tfstate
+          - task: TerraformCLI@1
+            displayName: 'Terraform : plan'
+            inputs:
+              command: plan
+              workingDirectory: $(Pipeline.Workspace)/infrastructure
+              publishPlanResults: CI - dev2 - s3account
+              providerServiceAws: awsdev2
+              providerAwsRegion: us-east-1
+              commandOptions: -lock=false -var-file="variables/dev2.eus.variables.tfvars" -out=$(System.DefaultWorkingDirectory)/terraform.tfplan -detailed-exitcode
+          - task: TerraformCLI@1
+            displayName: 'Terraform : apply'
+            condition: and(succeeded(), eq(variables['TERRAFORM_PLAN_HAS_CHANGES'],'true'))
+            inputs:
+              command: apply
+              workingDirectory: $(Pipeline.Workspace)/infrastructure
+              commandOptions: '$(System.DefaultWorkingDirectory)/terraform.tfplan'
+              providerServiceAws: awsdev2
+              providerAwsRegion: us-east-1
+
